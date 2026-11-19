@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
+</style><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FilipYTB Shooter</title>
+<style>body{margin:0;background:#0f0f0f;color:#fff;font-family:sans-serif;text-align:center;padding:12px}
+h1{font-size:28px;margin:8px 0}h1 span{color:#00ff88}.card{background:#1a1a1a;border:1px solid #333;border-radius:16px;padding:14px;margin:10px auto;max-width:420px}
+button{background:#00ff88;color:#000;border:none;padding:14px 18px;border-radius:12px;font-weight:800;font-size:18px;margin:6px;cursor:pointer;width:100%}
+button.alt{background:#222;color:#fff;border:1px solid #444}input{width:100%;padding:14px;border-radius:10px;border:1px solid #444;background:#000;color:#fff;font-size:16px;box-sizing:border-box}
+canvas{background:#000;display:block;margin:10px auto;border:2px solid #333;border-radius:12px;touch-action:none;max-width:100%}
+.tabs{display:flex;gap:6px} .tabs button{font-size:14px;padding:10px}.tabs button.on{background:#fff}
+.row{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #222}.gold{background:#3a2f00}.silver{background:#2a2a2a}.bronze{background:#2e1a00}
+</style></head><body>
+<h1>FILIPYTB <span>SHOOTER</span></h1>
+<p id="welcome">Move with touch, shooting is automatic.</p>
+<div class="card" id="setup">
+<h2 id="setupTitle">WELCOME TO FILIPYTB SHOOTER</h2>
+<p>Enter your name to start</p>
+<input id="nameInput" placeholder="Your name">
+<button onclick="saveName()">START PLAYING</button>
+</div>
+<div class="card" id="modeSel" style="display:none">
+<h2>CHOOSE MODE</h2>
+<button onclick="chooseMode('SOLO')">SOLO - 1 Player</button>
+<button onclick="chooseMode('DUO')">DUO - 2 Players</button>
+<button onclick="chooseMode('TRIO')">TRIO - 3 Players</button>
+<button onclick="chooseMode('SQUAD')">SQUAD - 4 Players</button>
+</div>
+<div class="card" id="roomSel" style="display:none">
+<h2 id="roomTitle">DUO</h2>
+<button onclick="createRoom()">CREATE ROOM</button>
+<input id="joinCode" placeholder="Enter friend's code">
+<button class="alt" onclick="joinRoom()">JOIN ROOM</button>
+<div id="roomInfo"></div>
+<button onclick="choosePlayStyle()" id="toStyle" style="display:none">CONTINUE</button>
+</div>
+<div class="card" id="styleSel" style="display:none">
+<h2>CHOOSE HOW TO PLAY</h2>
+<button onclick="startGame('TOGETHER')">🤝 TOGETHER VS ENEMIES</button>
+<button onclick="startGame('VERSUS')">⚔️ AGAINST EACH OTHER</button>
+</div>
+<div id="gameArea" style="display:none">
+<div style="max-width:420px;margin:auto;display:flex;gap:8px;justify-content:space-between">
+<div>SCORE: <b id="score">0</b></div><div>💎 <b id="diamonds">0</b></div><div>❤️ <b id="lives">3</b></div>
+</div>
+<div style="max-width:420px;margin:6px auto;display:flex;gap:8px;justify-content:space-between;font-size:13px;color:#aaa">
+<span>BEST: <b id="best">0</b></span><span>DIAMONDS EARNED: <b id="dEarned">0</b></span><span>GAMES: <b id="totalGames">0</b></span>
+</div>
+<div id="bossBar" style="display:none;max-width:420px;margin:auto">BOSS HP: <progress id="bossHp" value="100" max="100" style="width:100%"></progress></div>
+<div id="msg" style="color:#00ff88;font-weight:800;min-height:22px"></div>
+<canvas id="game" width="360" height="480"></canvas>
+<button onclick="restart()">PLAY AGAIN</button>
+<button class="alt" onclick="showLeader()">🏆 LEADERBOARD - TOP 100</button>
+</div>
+<div class="card" id="leader" style="display:none">
+<h2 id="leaderTitle">LEADERBOARD - SOLO TOP 100</h2>
+<div class="tabs"><button class="on" onclick="setTab('SOLO',this)">SOLO</button><button onclick="setTab('DUO',this)">DUO</button><button onclick="setTab('TRIO',this)">TRIO</button><button onclick="setTab('SQUAD',this)">SQUAD</button></div>
+<div id="leaderList"></div>
+<button class="alt" onclick="hideLeader()">Back to Game</button>
+</div>
+<p>Roblox = 10 pts | Fortnite = 15 pts | Brawl Stars = 20 pts | Boss every 500 = 10,15,20... Diamonds</p>
+<script>
+let playerName=localStorage.getItem('f_name')||'', mode='SOLO', style='TOGETHER', roomCode='', currentTab='SOLO';
+let score=0,diamonds=parseInt(localStorage.getItem('f_dia')||'0'), best=parseInt(localStorage.getItem('f_best')||'0'), totalGames=parseInt(localStorage.getItem('f_games')||'0'), lives=3, boss=null, bossCount=0;
+let c=document.getElementById('game'), x=c.getContext('2d'), px=160, enemies=[], bullets=[], over=false, started=false;
+function upd(){document.getElementById('score').innerText=score;document.getElementById('diamonds').innerText=diamonds;document.getElementById('lives').innerText=lives;document.getElementById('best').innerText=best;document.getElementById('dEarned').innerText=diamonds;document.getElementById('totalGames').innerText=totalGames;}
+upd();
+if(playerName){document.getElementById('setup').style.display='none';document.getElementById('modeSel').style.display='block';document.getElementById('welcome').innerText='Welcome back, '+playerName;}
+function saveName(){let v=document.getElementById('nameInput').value.trim(); if(!v) return alert('Enter your name'); playerName=v; localStorage.setItem('f_name',v); document.getElementById('setup').style.display='none'; document.getElementById('modeSel').style.display='block';}
+function chooseMode(m){mode=m; if(m=='SOLO'){document.getElementById('modeSel').style.display='none'; startGame('TOGETHER');} else {document.getElementById('modeSel').style.display='none'; document.getElementById('roomSel').style.display='block'; document.getElementById('roomTitle').innerText=m;}}
+function createRoom(){roomCode='FIL'+Math.floor(100+Math.random()*900); document.getElementById('roomInfo').innerHTML='<h3>YOUR ROOM CODE: '+roomCode+'</h3><p>Tell this code to your friend. Waiting... 1/'+(mode=='DUO'?2:mode=='TRIO'?3:4)+'</p>'; document.getElementById('toStyle').style.display='block';}
+function joinRoom(){let v=document.getElementById('joinCode').value.trim().toUpperCase(); if(!v) return alert('Enter friend code'); roomCode=v; document.getElementById('roomInfo').innerHTML='<p>Joined room '+roomCode+'! Ready!</p>'; document.getElementById('toStyle').style.display='block';}
+function choosePlayStyle(){document.getElementById('roomSel').style.display='none'; document.getElementById('styleSel').style.display='block';}
+function startGame(s){style=s; document.getElementById('styleSel').style.display='none'; document.getElementById('gameArea').style.display='block'; restart();}
+function restart(){score=0;lives=3;enemies=[];bullets=[];boss=null;bossCount=0;over=false;started=true;upd(); document.getElementById('msg').innerText='';}
+function spawn(){let types=[{t:'ROBLOX',col:'#ff3344',pts:10},{t:'FORTNITE',col:'#3b82f6',pts:15},{t:'BRAWL',col:'#facc15',pts:20}]; let e=types[Math.floor(Math.random()*types.length)]; enemies.push({x:Math.random()*320,y:-30,s:1+Math.random()*1.5,...e});}
+setInterval(()=>{if(started&&!over&&!boss) spawn();},700);
+setInterval(()=>{if(started&&!over) bullets.push({x:px+15,y:400});},300);
+c.addEventListener('touchmove',e=>{let r=c.getBoundingClientRect(); px=e.touches[0].clientX-r.left-15; e.preventDefault();},{passive:false});
+c.addEventListener('mousemove',e=>{let r=c.getBoundingClientRect(); px=e.clientX-r.left-15;});
+function saveScore(){totalGames++; if(score>best) best=score; localStorage.setItem('f_dia',diamonds); localStorage.setItem('f_best',best); localStorage.setItem('f_games',totalGames); let key='f_lb_'+mode; let arr=JSON.parse(localStorage.getItem(key)||'[]'); arr.push({name:playerName,score:score}); arr.sort((a,b)=>b.score-a.score); arr=arr.slice(0,100); localStorage.setItem(key,JSON.stringify(arr)); upd();}
+function loop(){
+x.clearRect(0,0,360,480);
+if(!started){requestAnimationFrame(loop); return;}
+if(over){x.fillStyle='#fff';x.font='28px sans-serif';x.fillText('GAME OVER',90,220);x.font='18px sans-serif';x.fillText('Score: '+score,130,250);return;}
+// boss spawn every 500
+if(score>0 && score%500==0 && !boss && score/500>bossCount){bossCount=score/500; let reward=10+(bossCount-1)*5; boss={x:120,y:40,hp:20+bossCount*10,max:20+bossCount*10,reward:reward}; document.getElementById('msg').innerText='BOSS INCOMING!'; document.getElementById('bossBar').style.display='block';}
+x.fillStyle='#00ff88'; x.fillRect(px,400,30,30); x.fillStyle='#fff'; x.fillRect(px+12,390,6,10);
+bullets.forEach((b,i)=>{b.y-=8; x.fillStyle='yellow'; x.fillRect(b.x,b.y,5,12); if(b.y<0) bullets.splice(i,1);});
+if(boss){boss.x+=Math.sin(Date.now()/300)*1.5; x.fillStyle='#a855f7'; x.fillRect(boss.x,boss.y,80,60); x.fillStyle='#fff'; x.fillText('BOSS',boss.x+20,boss.y+35); document.getElementById('bossHp').value=boss.hp; document.getElementById('bossHp').max=boss.max; bullets.forEach((b,j)=>{if(b.x>boss.x&&b.x<boss.x+80&&b.y>boss.y&&b.y<boss.y+60){bullets.splice(j,1); boss.hp--; if(boss.hp<=0){diamonds+=boss.reward; document.getElementById('msg').innerText='+'+boss.reward+' 💎 DIAMONDS!'; boss=null; document.getElementById('bossBar').style.display='none';}}});}
+enemies.forEach((e,i)=>{e.y+=e.s*3; x.fillStyle=e.col; x.fillRect(e.x,e.y,30,30); x.fillStyle='#fff'; x.font='12px sans-serif'; x.fillText(e.t[0],e.x+10,e.y+20); bullets.forEach((b,j)=>{if(b.x>e.x&&b.x<e.x+30&&b.y>e.y&&b.y<e.y+30){enemies.splice(i,1);bullets.splice(j,1); score+=e.pts;}}); if(e.y>480){enemies.splice(i,1); lives--; if(lives<=0){over=true; saveScore();}}});
+upd(); requestAnimationFrame(loop);
+} loop();
+function showLeader(){document.getElementById('leader').style.display='block'; renderLeader();}
+function hideLeader(){document.getElementById('leader').style.display='none';}
+function setTab(t,btn){currentTab=t; document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderLeader();}
+function renderLeader(){let arr=JSON.parse(localStorage.getItem('f_lb_'+currentTab)||'[]'); document.getElementById('leaderTitle').innerText='LEADERBOARD - '+currentTab+' TOP 100'; let h=''; if(!arr.length) h='<p>No scores yet - be the first!</p>'; arr.forEach((r,i)=>{let cls=i==0?'gold':i==1?'silver':i==2?'bronze':''; let medal=i==0?'🥇':i==1?'🥈':i==2?'🥉':(i+1)+'.'; h+='<div class="row '+cls+'"><span>'+medal+' '+r.name+'</span><b>'+r.score+'</b></div>';}); document.getElementById('leaderList').innerHTML=h;}
+</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body></html>
